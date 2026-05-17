@@ -59,6 +59,10 @@ export const adminService = {
 
   async getProducts(search?: string, page = 1, limit = 20): Promise<{ products: AdminProduct[]; total: number; page: number; totalPages: number }> {
     const { data } = await api.get('/admin/products', { params: { ...(search ? { search } : {}), page, limit } })
+    // Defensa: el backend puede devolver el objeto paginado o un array legacy
+    if (Array.isArray(data)) {
+      return { products: data, total: data.length, page: 1, totalPages: 1 }
+    }
     return data
   },
 
