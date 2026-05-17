@@ -24,13 +24,18 @@ const NEXT_LABEL: Record<string, string> = {
 export default function AdminOrderList() {
   const [orders, setOrders] = useState<AdminOrder[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
   const [updating, setUpdating] = useState<string | null>(null)
 
   const load = (status?: string) => {
     setLoading(true)
-    adminService.getOrders(status || undefined).then(setOrders).catch(console.error).finally(() => setLoading(false))
+    setError(null)
+    adminService.getOrders(status || undefined)
+      .then(setOrders)
+      .catch((err) => setError(err instanceof Error ? err.message : 'Error al cargar las órdenes'))
+      .finally(() => setLoading(false))
   }
 
   useEffect(() => { document.title = 'Órdenes — Admin'; load() }, [])
@@ -57,6 +62,16 @@ export default function AdminOrderList() {
   return (
     <div className="space-y-6">
       <h1 className="font-display text-2xl tracking-widest text-white">ÓRDENES</h1>
+
+      {error && (
+        <div className="flex items-center gap-3 bg-red-900/20 border border-red-800/30 rounded-lg px-4 py-3 text-sm text-red-400">
+          <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+          <span>{error}</span>
+          <button onClick={() => load(filter || undefined)} className="ml-auto text-xs text-red-400/70 hover:text-red-400 underline transition-colors">Reintentar</button>
+        </div>
+      )}
 
       {/* Status filter */}
       <div className="flex gap-2 flex-wrap">

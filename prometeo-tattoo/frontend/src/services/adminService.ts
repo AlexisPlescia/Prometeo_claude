@@ -57,8 +57,13 @@ export const adminService = {
     return data
   },
 
-  async getProducts(search?: string): Promise<AdminProduct[]> {
-    const { data } = await api.get('/admin/products', { params: search ? { search } : {} })
+  async getProducts(search?: string, page = 1, limit = 20): Promise<{ products: AdminProduct[]; total: number; page: number; totalPages: number }> {
+    const { data } = await api.get('/admin/products', { params: { ...(search ? { search } : {}), page, limit } })
+    return data
+  },
+
+  async getProduct(id: string): Promise<AdminProduct> {
+    const { data } = await api.get(`/admin/products/${id}`)
     return data
   },
 

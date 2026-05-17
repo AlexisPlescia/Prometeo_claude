@@ -38,10 +38,14 @@ function StatCard({ label, value, growth, icon }: { label: string; value: string
 export default function AdminDashboard() {
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     document.title = 'Dashboard — Admin'
-    adminService.getStats().then(setStats).catch(console.error).finally(() => setLoading(false))
+    adminService.getStats()
+      .then(setStats)
+      .catch((err) => setError(err instanceof Error ? err.message : 'Error al cargar el dashboard'))
+      .finally(() => setLoading(false))
   }, [])
 
   if (loading) {
@@ -58,7 +62,15 @@ export default function AdminDashboard() {
     )
   }
 
-  if (!stats) return <p className="text-white/40">Error cargando stats</p>
+  if (error) return (
+    <div className="flex items-center gap-3 bg-red-900/20 border border-red-800/30 rounded-lg px-4 py-3 text-sm text-red-400">
+      <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+      </svg>
+      {error}
+    </div>
+  )
+  if (!stats) return null
 
   return (
     <div className="space-y-8">

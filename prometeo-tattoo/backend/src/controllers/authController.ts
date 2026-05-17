@@ -29,6 +29,15 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
   }
 }
 
+export const refresh = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await authService.refreshToken(req.user!.userId, req.user!.role)
+    res.json(result)
+  } catch (err) {
+    next(err)
+  }
+}
+
 export const getMe = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = await authService.getMe(req.user!.userId)

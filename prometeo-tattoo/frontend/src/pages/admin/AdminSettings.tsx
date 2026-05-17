@@ -29,6 +29,13 @@ const SECTIONS = [
     ],
   },
   {
+    title: 'Pagos (transferencia bancaria)',
+    fields: [
+      { key: 'payment_alias', label: 'Alias de transferencia (ej: prometeo.tattoo)' },
+      { key: 'payment_cbu', label: 'CBU (opcional)' },
+    ],
+  },
+  {
     title: 'Anuncios',
     fields: [
       { key: 'announcement_bar', label: 'Texto del anuncio superior (dejar vacío para ocultar)' },
@@ -41,10 +48,13 @@ export default function AdminSettings() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState('')
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     document.title = 'Configuración — Admin'
-    adminService.getConfig().then((c) => { setConfig(c); setLoading(false) }).catch(console.error)
+    adminService.getConfig()
+      .then((c) => { setConfig(c); setLoading(false) })
+      .catch((err) => { setLoadError(err instanceof Error ? err.message : 'Error al cargar la configuración'); setLoading(false) })
   }, [])
 
   const handleSave = async (e: React.FormEvent) => {
@@ -63,6 +73,15 @@ export default function AdminSettings() {
   }
 
   if (loading) return <div className="animate-pulse space-y-4">{[...Array(6)].map((_, i) => <div key={i} className="h-10 bg-white/5 rounded" />)}</div>
+
+  if (loadError) return (
+    <div className="flex items-center gap-3 bg-red-900/20 border border-red-800/30 rounded-lg px-4 py-3 text-sm text-red-400">
+      <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+      </svg>
+      {loadError}
+    </div>
+  )
 
   return (
     <div className="max-w-2xl space-y-6">

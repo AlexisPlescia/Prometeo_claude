@@ -13,9 +13,22 @@ export const getStats = async (_req: Request, res: Response, next: NextFunction)
 // Products
 export const getProducts = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { search } = req.query
-    const products = await adminService.adminGetProducts(search as string | undefined)
-    res.json(products)
+    const { search, page, limit } = req.query
+    const result = await adminService.adminGetProducts(
+      search as string | undefined,
+      page ? parseInt(page as string, 10) : 1,
+      limit ? parseInt(limit as string, 10) : 20,
+    )
+    res.json(result)
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const getProduct = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const product = await adminService.adminGetProductById(req.params.id)
+    res.json(product)
   } catch (err) {
     next(err)
   }
@@ -98,7 +111,8 @@ export const getOrders = async (req: Request, res: Response, next: NextFunction)
 
 export const updateOrderStatus = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { status } = req.body
+    // status ya validado por Zod (orderStatusSchema) antes de llegar acá
+    const status = req.body.status as 'PENDING' | 'CONFIRMED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED'
     const order = await adminService.adminUpdateOrderStatus(req.params.id, status)
     res.json(order)
   } catch (err) {

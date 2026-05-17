@@ -178,15 +178,35 @@ export async function getDashboardStats() {
 
 // ─── PRODUCTS ──────────────────────────────────────────────────────────────
 
-export async function adminGetProducts(search?: string) {
+export async function adminGetProducts(search?: string, page = 1, limit = 20) {
   const where = search
     ? { name: { contains: search, mode: 'insensitive' as const } }
     : {}
-  return prisma.product.findMany({
-    where,
+  const skip = (page - 1) * limit
+  const [products, total] = await Promise.all([
+    prisma.product.findMany({
+      where,
+      include: { category: true },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    }),
+    prisma.product.count({ where }),
+  ])
+  return { products, total, page, totalPages: Math.ceil(total / limit) }
+}
+
+export async function adminGetProductById(id: string) {
+  const product = await prisma.product.findUnique({
+    where: { id },
     include: { category: true },
-    orderBy: { createdAt: 'desc' },
   })
+  if (!product) {
+    const err: Error & { statusCode?: number } = new Error('Producto no encontrado')
+    err.statusCode = 404
+    throw err
+  }
+  return product
 }
 
 export async function adminCreateProduct(data: {
@@ -243,6 +263,14 @@ export async function adminUpdateProduct(
 }
 
 export async function adminDeleteProduct(id: string) {
+  const orderCount = await prisma.orderItem.count({ where: { productId: id } })
+  if (orderCount > 0) {
+    const err: Error & { statusCode?: number } = new Error(
+      `No se puede eliminar: el producto tiene ${orderCount} orden(es) asociada(s)`,
+    )
+    err.statusCode = 409
+    throw err
+  }
   return prisma.product.delete({ where: { id } })
 }
 
@@ -281,8 +309,11 @@ export async function adminDeleteCategory(id: string) {
 // ─── ORDERS ────────────────────────────────────────────────────────────────
 
 export async function adminGetOrders(status?: string) {
+  type OrderStatus = 'PENDING' | 'CONFIRMED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED'
+  const validStatuses: OrderStatus[] = ['PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED', 'CANCELLED']
+  const filteredStatus = status && validStatuses.includes(status as OrderStatus) ? (status as OrderStatus) : undefined
   return prisma.order.findMany({
-    where: status ? { status: status as never } : {},
+    where: filteredStatus ? { status: filteredStatus } : {},
     include: {
       user: { select: { name: true, email: true } },
       items: { include: { product: { select: { name: true, images: true } } } },
@@ -293,7 +324,7 @@ export async function adminGetOrders(status?: string) {
 
 const STATUS_FLOW = ['PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED']
 
-export async function adminUpdateOrderStatus(id: string, status: string) {
+export async function adminUpdateOrderStatus(id: string, status: 'PENDING' | 'CONFIRMED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED') {
   const order = await prisma.order.findUnique({
     where: { id },
     include: { items: true },
@@ -325,5 +356,5 @@ export async function adminUpdateOrderStatus(id: string, status: string) {
     err.statusCode = 400
     throw err
   }
-  return prisma.order.update({ where: { id }, data: { status: status as never } })
+  return prisma.order.update({ where: { id }, data: { status } })
 }

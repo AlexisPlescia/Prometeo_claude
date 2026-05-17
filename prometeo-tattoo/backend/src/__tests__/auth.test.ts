@@ -5,7 +5,6 @@ import request from 'supertest'
 beforeAll(() => {
   process.env.JWT_SECRET = 'test-secret'
   process.env.DATABASE_URL = 'postgresql://user:pass@localhost:5432/test'
-  process.env.DIRECT_URL = 'postgresql://user:pass@localhost:5432/test'
   process.env.MERCADOPAGO_ACCESS_TOKEN = 'TEST-dummy'
   process.env.ALLOWED_ORIGINS = 'http://localhost:5173'
   process.env.NODE_ENV = 'test'

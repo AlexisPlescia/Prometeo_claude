@@ -47,6 +47,20 @@ export async function login(email: string, password: string) {
   return { user: userWithoutPassword, token }
 }
 
+export async function refreshToken(userId: string, role: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, name: true, email: true, role: true, createdAt: true },
+  })
+  if (!user) {
+    const err: Error & { statusCode?: number } = new Error('Usuario no encontrado')
+    err.statusCode = 404
+    throw err
+  }
+  const token = jwt.sign({ userId: user.id, role: user.role }, env.JWT_SECRET, { expiresIn: '7d' })
+  return { user, token }
+}
+
 export async function getMe(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },

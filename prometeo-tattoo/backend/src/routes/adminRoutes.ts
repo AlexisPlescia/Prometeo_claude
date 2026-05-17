@@ -1,7 +1,15 @@
 import { Router } from 'express'
 import { auth } from '../middlewares/auth'
 import { adminOnly } from '../middlewares/adminOnly'
+import { validate } from '../middlewares/validate'
 import * as adminController from '../controllers/adminController'
+import {
+  createProductSchema,
+  updateProductSchema,
+  createCategorySchema,
+  updateCategorySchema,
+  orderStatusSchema,
+} from '../schemas/admin'
 
 const router = Router()
 
@@ -10,16 +18,17 @@ router.use(auth, adminOnly)
 router.get('/stats', adminController.getStats)
 
 router.get('/products', adminController.getProducts)
-router.post('/products', adminController.createProduct)
-router.patch('/products/:id', adminController.updateProduct)
+router.post('/products', validate(createProductSchema), adminController.createProduct)
+router.get('/products/:id', adminController.getProduct)
+router.patch('/products/:id', validate(updateProductSchema), adminController.updateProduct)
 router.delete('/products/:id', adminController.deleteProduct)
 
 router.get('/categories', adminController.getCategories)
-router.post('/categories', adminController.createCategory)
-router.patch('/categories/:id', adminController.updateCategory)
+router.post('/categories', validate(createCategorySchema), adminController.createCategory)
+router.patch('/categories/:id', validate(updateCategorySchema), adminController.updateCategory)
 router.delete('/categories/:id', adminController.deleteCategory)
 
 router.get('/orders', adminController.getOrders)
-router.patch('/orders/:id', adminController.updateOrderStatus)
+router.patch('/orders/:id', validate(orderStatusSchema), adminController.updateOrderStatus)
 
 export default router

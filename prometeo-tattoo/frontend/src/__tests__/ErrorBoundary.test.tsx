@@ -15,7 +15,7 @@ class TestErrorBoundary extends React.Component<
   }
 }
 
-function ThrowingComponent() {
+function ThrowingComponent(): React.ReactElement {
   throw new Error('test error')
 }
 

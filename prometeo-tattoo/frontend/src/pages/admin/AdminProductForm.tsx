@@ -36,23 +36,20 @@ export default function AdminProductForm() {
     adminService.getCategories().then(setCategories).catch(console.error)
 
     if (isEdit && id) {
-      adminService.getProducts().then((products) => {
-        const product = products.find((p) => p.id === id)
-        if (product) {
-          setForm({
-            name: product.name,
-            description: product.description,
-            price: product.price.toString(),
-            comparePrice: product.comparePrice?.toString() || '',
-            stock: product.stock.toString(),
-            categoryId: product.categoryId,
-            brand: product.brand,
-            images: product.images.join('\n'),
-            featured: product.featured,
-            onSale: product.onSale,
-          })
-        }
-      })
+      adminService.getProduct(id).then((product) => {
+        setForm({
+          name: product.name,
+          description: product.description,
+          price: product.price.toString(),
+          comparePrice: product.comparePrice?.toString() || '',
+          stock: product.stock.toString(),
+          categoryId: product.categoryId,
+          brand: product.brand,
+          images: product.images.join('\n'),
+          featured: product.featured,
+          onSale: product.onSale,
+        })
+      }).catch(() => setError('No se pudo cargar el producto'))
     }
   }, [id, isEdit])
 

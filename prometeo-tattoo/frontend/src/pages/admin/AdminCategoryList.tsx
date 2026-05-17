@@ -9,9 +9,15 @@ export default function AdminCategoryList() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  const [loadError, setLoadError] = useState<string | null>(null)
+
   const load = () => {
     setLoading(true)
-    adminService.getCategories().then(setCategories).catch(console.error).finally(() => setLoading(false))
+    setLoadError(null)
+    adminService.getCategories()
+      .then(setCategories)
+      .catch((err) => setLoadError(err instanceof Error ? err.message : 'Error al cargar las categorías'))
+      .finally(() => setLoading(false))
   }
 
   useEffect(() => { document.title = 'Categorías — Admin'; load() }, [])
@@ -56,6 +62,16 @@ export default function AdminCategoryList() {
   return (
     <div className="space-y-6 max-w-3xl">
       <h1 className="font-display text-2xl tracking-widest text-white">CATEGORÍAS</h1>
+
+      {loadError && (
+        <div className="flex items-center gap-3 bg-red-900/20 border border-red-800/30 rounded-lg px-4 py-3 text-sm text-red-400">
+          <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+          <span>{loadError}</span>
+          <button onClick={load} className="ml-auto text-xs text-red-400/70 hover:text-red-400 underline transition-colors">Reintentar</button>
+        </div>
+      )}
 
       {/* Form */}
       <div className="bg-[#0d0d10] border border-white/5 rounded-lg p-5">

@@ -21,7 +21,22 @@ export async function login(email: string, password: string): Promise<AuthRespon
   return data
 }
 
+export async function refresh(): Promise<AuthResponse> {
+  const { data } = await api.post('/auth/refresh')
+  return data
+}
+
 export async function getMe(): Promise<AuthResponse['user']> {
   const { data } = await api.get('/auth/me')
   return data
+}
+
+// Decodifica el exp del JWT sin verificar firma (solo para timing)
+export function getTokenExpiryMs(token: string): number | null {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return typeof payload.exp === 'number' ? payload.exp * 1000 : null
+  } catch {
+    return null
+  }
 }

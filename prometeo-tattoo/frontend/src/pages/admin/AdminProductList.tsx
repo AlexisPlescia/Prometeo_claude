@@ -4,24 +4,43 @@ import { adminService, AdminProduct } from '../../services/adminService'
 import { formatPrice } from '../../utils/formatPrice'
 
 const PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Crect width='60' height='60' fill='%231a1a1a'/%3E%3C/svg%3E"
+const PAGE_SIZE = 20
 
 export default function AdminProductList() {
   const [products, setProducts] = useState<AdminProduct[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [total, setTotal] = useState(0)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<AdminProduct | null>(null)
 
-  const load = (s?: string) => {
+  const load = (s?: string, p = 1) => {
     setLoading(true)
-    adminService.getProducts(s).then(setProducts).catch(console.error).finally(() => setLoading(false))
+    setError(null)
+    adminService.getProducts(s, p, PAGE_SIZE)
+      .then(({ products: prods, total: t, totalPages: tp }) => {
+        setProducts(prods)
+        setTotal(t)
+        setTotalPages(tp)
+        setPage(p)
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Error al cargar los productos'))
+      .finally(() => setLoading(false))
   }
 
   useEffect(() => { document.title = 'Productos — Admin'; load() }, [])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    load(search || undefined)
+    load(search || undefined, 1)
+  }
+
+  const handleClearSearch = () => {
+    setSearch('')
+    load(undefined, 1)
   }
 
   const handleDelete = async (id: string) => {
@@ -29,6 +48,7 @@ export default function AdminProductList() {
     try {
       await adminService.deleteProduct(id)
       setProducts((prev) => prev.filter((p) => p.id !== id))
+      setTotal((prev) => prev - 1)
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Error al eliminar')
     } finally {
@@ -40,7 +60,12 @@ export default function AdminProductList() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="font-display text-2xl tracking-widest text-white">PRODUCTOS</h1>
+        <div>
+          <h1 className="font-display text-2xl tracking-widest text-white">PRODUCTOS</h1>
+          {!loading && !error && (
+            <p className="text-xs text-white/30 mt-1">{total} {total === 1 ? 'producto' : 'productos'} en total</p>
+          )}
+        </div>
         <Link to="/admin/products/new" className="px-4 py-2 bg-accent text-white text-sm rounded hover:bg-red-700 transition-colors">
           + Nuevo producto
         </Link>
@@ -58,11 +83,26 @@ export default function AdminProductList() {
           Buscar
         </button>
         {search && (
-          <button type="button" onClick={() => { setSearch(''); load() }} className="px-3 py-2 text-white/40 hover:text-white text-sm transition-colors">
+          <button type="button" onClick={handleClearSearch} className="px-3 py-2 text-white/40 hover:text-white text-sm transition-colors">
             ✕
           </button>
         )}
       </form>
+
+      {error && (
+        <div className="flex items-center gap-3 bg-red-900/20 border border-red-800/30 rounded-lg px-4 py-3 text-sm text-red-400">
+          <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+          <span>{error}</span>
+          <button
+            onClick={() => load(search || undefined, page)}
+            className="ml-auto text-xs text-red-400/70 hover:text-red-400 underline transition-colors"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
 
       <div className="bg-[#0d0d10] border border-white/5 rounded-lg overflow-hidden">
         <table className="w-full text-sm">
@@ -85,7 +125,11 @@ export default function AdminProductList() {
                 </tr>
               ))
             ) : products.length === 0 ? (
-              <tr><td colSpan={7} className="py-12 text-center text-white/20">No hay productos</td></tr>
+              <tr>
+                <td colSpan={7} className="py-12 text-center text-white/20">
+                  {error ? '' : 'No hay productos'}
+                </td>
+              </tr>
             ) : (
               products.map((p) => (
                 <tr key={p.id} className="border-b border-white/5 hover:bg-white/3 transition-colors">
@@ -110,15 +154,9 @@ export default function AdminProductList() {
                   </td>
                   <td className="px-4 py-3 text-center">
                     <div className="flex items-center justify-center gap-1">
-                      {p.onSale && (
-                        <span className="px-1.5 py-0.5 bg-accent/20 text-accent text-xs rounded">OFERTA</span>
-                      )}
-                      {p.featured && (
-                        <span className="px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded">DEST.</span>
-                      )}
-                      {!p.onSale && !p.featured && (
-                        <span className="text-white/20 text-xs">—</span>
-                      )}
+                      {p.onSale && <span className="px-1.5 py-0.5 bg-accent/20 text-accent text-xs rounded">OFERTA</span>}
+                      {p.featured && <span className="px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded">DEST.</span>}
+                      {!p.onSale && !p.featured && <span className="text-white/20 text-xs">—</span>}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -144,6 +182,55 @@ export default function AdminProductList() {
           </tbody>
         </table>
       </div>
+
+      {/* Paginación */}
+      {!loading && !error && totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-white/30">
+            Página {page} de {totalPages}
+          </p>
+          <div className="flex gap-1">
+            <button
+              onClick={() => load(search || undefined, page - 1)}
+              disabled={page === 1}
+              className="px-3 py-1.5 text-xs text-white/50 bg-white/5 rounded hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              ← Anterior
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+              .reduce<(number | '…')[]>((acc, p, i, arr) => {
+                if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push('…')
+                acc.push(p)
+                return acc
+              }, [])
+              .map((item, i) =>
+                item === '…' ? (
+                  <span key={`ellipsis-${i}`} className="px-3 py-1.5 text-xs text-white/20">…</span>
+                ) : (
+                  <button
+                    key={item}
+                    onClick={() => load(search || undefined, item as number)}
+                    className={`px-3 py-1.5 text-xs rounded transition-colors ${
+                      item === page
+                        ? 'bg-accent text-white'
+                        : 'text-white/50 bg-white/5 hover:bg-white/10'
+                    }`}
+                  >
+                    {item}
+                  </button>
+                ),
+              )}
+            <button
+              onClick={() => load(search || undefined, page + 1)}
+              disabled={page === totalPages}
+              className="px-3 py-1.5 text-xs text-white/50 bg-white/5 rounded hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              Siguiente →
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Confirm delete modal */}
       {confirmDelete && (

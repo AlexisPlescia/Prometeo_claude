@@ -1,4 +1,5 @@
 import { prisma } from '../config/prisma'
+import { sendOrderConfirmation, sendNewOrderNotification } from './emailService'
 
 async function getShippingConfig(): Promise<{ threshold: number; cost: number }> {
   const configs = await prisma.storeConfig.findMany({
@@ -83,6 +84,35 @@ export async function createOrder(
 
     return newOrder
   })
+
+  // Leer configuración de pago para incluir en el email
+  const paymentConfigs = await prisma.storeConfig.findMany({
+    where: { key: { in: ['payment_alias', 'payment_cbu', 'whatsapp_number', 'store_email'] } },
+  })
+  const cfg = Object.fromEntries(paymentConfigs.map((c) => [c.key, c.value]))
+
+  const emailData = {
+    orderId: order.id,
+    customerName: order.items[0]
+      ? (await prisma.user.findUnique({ where: { id: userId }, select: { name: true } }))?.name ?? 'Cliente'
+      : 'Cliente',
+    customerEmail: (await prisma.user.findUnique({ where: { id: userId }, select: { email: true } }))?.email ?? '',
+    items: order.items.map((item) => ({ name: item.name, quantity: item.quantity, price: item.price })),
+    subtotal: order.items.reduce((s, i) => s + i.price * i.quantity, 0),
+    shippingCost: order.total - order.items.reduce((s, i) => s + i.price * i.quantity, 0),
+    total: order.total,
+    address: order.address,
+    phone: order.phone ?? undefined,
+    notes: order.notes ?? undefined,
+    paymentAlias: cfg['payment_alias'] ?? '',
+    paymentCbu: cfg['payment_cbu'],
+    contactWhatsapp: cfg['whatsapp_number'],
+    contactEmail: cfg['store_email'],
+  }
+
+  // No-blocking: los emails no deben romper el flujo del pedido
+  void sendOrderConfirmation(emailData)
+  void sendNewOrderNotification(emailData)
 
   return order
 }

@@ -13,4 +13,16 @@ export default defineConfig({
       '@': resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-charts': ['recharts'],
+          'vendor-http': ['axios'],
+          'vendor-store': ['zustand'],
+        },
+      },
+    },
+  },
 })

@@ -24,46 +24,47 @@ export async function getCart(userId: string) {
 }
 
 export async function addItem(userId: string, productId: string, quantity: number) {
-  const product = await prisma.product.findUnique({ where: { id: productId } })
-  if (!product) {
-    const err: Error & { statusCode?: number } = new Error('Producto no encontrado')
-    err.statusCode = 404
-    throw err
-  }
-  if (product.stock < quantity) {
-    const err: Error & { statusCode?: number } = new Error(
-      `Stock insuficiente. Disponible: ${product.stock}`,
-    )
-    err.statusCode = 409
-    throw err
-  }
-
-  const cart = await getOrCreateCart(userId)
-
-  const existing = await prisma.cartItem.findUnique({
-    where: { cartId_productId: { cartId: cart.id, productId } },
-  })
-
-  if (existing) {
-    const newQty = existing.quantity + quantity
-    if (product.stock < newQty) {
-      const err: Error & { statusCode?: number } = new Error(
-        `Stock insuficiente. Disponible: ${product.stock}`,
-      )
-      err.statusCode = 409
+  return prisma.$transaction(async (tx) => {
+    const product = await tx.product.findUnique({ where: { id: productId } })
+    if (!product) {
+      const err: Error & { statusCode?: number } = new Error('Producto no encontrado')
+      err.statusCode = 404
       throw err
     }
-    await prisma.cartItem.update({
-      where: { id: existing.id },
-      data: { quantity: newQty },
-    })
-  } else {
-    await prisma.cartItem.create({
-      data: { cartId: cart.id, productId, quantity },
-    })
-  }
 
-  return getOrCreateCart(userId)
+    const cart = await tx.cart.upsert({
+      where: { userId },
+      update: {},
+      create: { userId },
+    })
+
+    const existing = await tx.cartItem.findUnique({
+      where: { cartId_productId: { cartId: cart.id, productId } },
+    })
+
+    if (existing) {
+      const newQty = existing.quantity + quantity
+      if (product.stock < newQty) {
+        const err: Error & { statusCode?: number } = new Error(
+          `Stock insuficiente. Disponible: ${product.stock}`,
+        )
+        err.statusCode = 409
+        throw err
+      }
+      await tx.cartItem.update({ where: { id: existing.id }, data: { quantity: newQty } })
+    } else {
+      if (product.stock < quantity) {
+        const err: Error & { statusCode?: number } = new Error(
+          `Stock insuficiente. Disponible: ${product.stock}`,
+        )
+        err.statusCode = 409
+        throw err
+      }
+      await tx.cartItem.create({ data: { cartId: cart.id, productId, quantity } })
+    }
+
+    return tx.cart.findUnique({ where: { id: cart.id }, include: CART_INCLUDE })
+  })
 }
 
 export async function updateItem(userId: string, itemId: string, quantity: number) {

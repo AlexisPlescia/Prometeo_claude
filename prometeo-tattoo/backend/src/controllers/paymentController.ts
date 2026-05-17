@@ -1,4 +1,27 @@
+// ─── MercadoPago — deshabilitado (MVP sin MP) ────────────────────────────────
+// El flujo de pago actual es: cliente crea orden → recibe email con alias/CBU
+// → envía comprobante de transferencia → admin confirma manualmente en panel.
+//
+// Para reactivar MP: descomentar todo este archivo, restaurar paymentRoutes.ts
+// y la línea de paymentRoutes en routes/index.ts.
+// ─────────────────────────────────────────────────────────────────────────────
+
 import { Request, Response, NextFunction } from 'express'
+
+// Placeholder para que TypeScript no se queje con el import en paymentRoutes
+export const createPreference = (_req: Request, res: Response, _next: NextFunction) => {
+  res.status(503).json({ error: true, message: 'Pasarela de pago no disponible temporalmente' })
+}
+
+export const webhook = (_req: Request, res: Response, _next: NextFunction) => {
+  res.status(200).json({ received: true })
+}
+
+/*
+──────────────────────────────────────────────────────────────
+CÓDIGO ORIGINAL DE MP (descomentar cuando se reactive):
+──────────────────────────────────────────────────────────────
+
 import crypto from 'crypto'
 import { prisma } from '../config/prisma'
 import { env } from '../config/env'
@@ -44,14 +67,20 @@ export const createPreference = async (req: Request, res: Response, next: NextFu
 
 function validateMPSignature(req: Request): boolean {
   const secret = env.MERCADOPAGO_WEBHOOK_SECRET
-  if (!secret) return true // En dev sin secret configurado, se permite pasar
+  if (!secret) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[MP Webhook] MERCADOPAGO_WEBHOOK_SECRET no configurado — aceptando en dev')
+      return true
+    }
+    console.error('[MP Webhook] MERCADOPAGO_WEBHOOK_SECRET no configurado en producción — rechazando')
+    return false
+  }
 
   const xSignature = req.headers['x-signature'] as string | undefined
   const xRequestId = req.headers['x-request-id'] as string | undefined
 
   if (!xSignature) return false
 
-  // MP firma: ts=<timestamp>,v1=<hash>
   const parts = Object.fromEntries(
     xSignature.split(',').map((p) => p.split('=') as [string, string]),
   )
@@ -80,7 +109,6 @@ async function fetchMPPayment(paymentId: string) {
 
 export const webhook = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Responder 200 inmediatamente para que MP no reintente innecesariamente
     res.status(200).json({ received: true })
 
     if (!validateMPSignature(req)) {
@@ -101,18 +129,11 @@ export const webhook = async (req: Request, res: Response, next: NextFunction) =
       return
     }
 
-    if (payment.status !== 'approved') {
-      console.log(`[MP Webhook] Pago ${paymentId} no aprobado (status: ${payment.status})`)
-      return
-    }
+    if (payment.status !== 'approved') return
 
     const orderId = payment.external_reference
-    if (!orderId) {
-      console.warn('[MP Webhook] Sin external_reference en el pago')
-      return
-    }
+    if (!orderId) return
 
-    // Idempotente: solo actualiza si está PENDING
     const updated = await prisma.order.updateMany({
       where: { id: orderId, status: 'PENDING' },
       data: { status: 'CONFIRMED', mpPaymentId: paymentId },
@@ -120,10 +141,10 @@ export const webhook = async (req: Request, res: Response, next: NextFunction) =
 
     if (updated.count > 0) {
       console.log(`[MP Webhook] Orden ${orderId} confirmada (pago ${paymentId})`)
-    } else {
-      console.log(`[MP Webhook] Orden ${orderId} ya procesada o no encontrada`)
     }
   } catch (err) {
     next(err)
   }
 }
+──────────────────────────────────────────────────────────────
+*/

@@ -8,7 +8,6 @@ const TEST_JWT_SECRET = 'test-secret'
 beforeAll(() => {
   process.env.JWT_SECRET = TEST_JWT_SECRET
   process.env.DATABASE_URL = 'postgresql://user:pass@localhost:5432/test'
-  process.env.DIRECT_URL = 'postgresql://user:pass@localhost:5432/test'
   process.env.MERCADOPAGO_ACCESS_TOKEN = 'TEST-dummy'
   process.env.ALLOWED_ORIGINS = 'http://localhost:5173'
   process.env.NODE_ENV = 'test'
@@ -28,10 +27,22 @@ vi.mock('../config/prisma', () => ({
     cartItem: {
       deleteMany: vi.fn(),
     },
+    storeConfig: {
+      findMany: vi.fn().mockResolvedValue([]),
+    },
+    user: {
+      findUnique: vi.fn().mockResolvedValue(null),
+    },
   },
 }))
 
-function makeToken(userId = 'user-1', role = 'USER') {
+// Evitar que emailService intente conectar SMTP en tests
+vi.mock('../services/emailService', () => ({
+  sendOrderConfirmation: vi.fn().mockResolvedValue(undefined),
+  sendNewOrderNotification: vi.fn().mockResolvedValue(undefined),
+}))
+
+function makeToken(userId = 'user-1', role = 'CUSTOMER') {
   return jwt.sign({ userId, role }, TEST_JWT_SECRET, { expiresIn: '1h' })
 }
 

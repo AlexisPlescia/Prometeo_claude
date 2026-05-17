@@ -4,7 +4,6 @@ import { useCart } from '../hooks/useCart'
 import { useAuthStore } from '../store/authStore'
 import { useConfigStore } from '../store/configStore'
 import { createOrder } from '../services/orderService'
-import api from '../services/api'
 import { formatPrice } from '../utils/formatPrice'
 
 type Step = 'shipping' | 'review'
@@ -80,20 +79,15 @@ export default function Checkout() {
         phone: shipping.phone || undefined,
         notes: shipping.notes || undefined,
       })
-
-      // Intentar crear preferencia de MercadoPago
-      try {
-        const { data } = await api.post('/payments/create-preference', { orderId: order.id })
-        const url = data.sandboxInitPoint || data.initPoint
-        if (url) {
-          window.location.href = url
-          return
-        }
-      } catch {
-        // Si MP no está configurado, ir directo al éxito
-      }
-
-      navigate('/checkout/success')
+      // Pasamos el ID y total al success via state para mostrarlos sin params en URL
+      navigate('/checkout/success', {
+        state: {
+          orderId: order.id,
+          total: order.total,
+          paymentAlias: config.payment_alias || '',
+          paymentCbu: config.payment_cbu || '',
+        },
+      })
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al crear la orden'
       setError(msg)
@@ -189,12 +183,12 @@ export default function Checkout() {
             <div className="flex gap-3">
               <button className="btn-secondary flex-1" onClick={() => setStep('shipping')} disabled={loading}>← Volver</button>
               <button className="btn-primary flex-1" onClick={handleConfirm} disabled={loading}>
-                {loading ? 'Procesando...' : 'Ir a pagar →'}
+                {loading ? 'Procesando...' : 'Confirmar pedido →'}
               </button>
             </div>
 
             <p className="text-center text-xs text-[#e8e8e8]/30">
-              Serás redirigido a MercadoPago para completar el pago de forma segura
+              Vas a recibir las instrucciones de pago por email
             </p>
           </div>
         )}
