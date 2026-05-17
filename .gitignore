@@ -34,3 +34,4 @@ Thumbs.db
 
 # Backups y archivos temporales
 *.zip
+.vercel
