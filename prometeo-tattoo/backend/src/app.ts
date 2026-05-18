@@ -41,6 +41,15 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
+app.get('/api/keepalive', (req, res) => {
+  const secret = env.CRON_SECRET
+  if (secret && req.query.token !== secret) {
+    res.status(401).json({ error: 'Unauthorized' })
+    return
+  }
+  res.json({ status: 'ok', timestamp: new Date().toISOString() })
+})
+
 app.use('/api', router)
 app.use(errorHandler)
 

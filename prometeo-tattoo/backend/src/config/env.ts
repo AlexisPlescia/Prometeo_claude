@@ -48,4 +48,5 @@ export const env = {
   SMTP_PASS: optional('SMTP_PASS'),
   SMTP_FROM: optional('SMTP_FROM', 'Prometeo Tattoo <noreply@prometeo.com>'),
   ADMIN_EMAIL: optional('ADMIN_EMAIL'),
+  CRON_SECRET: optional('CRON_SECRET'),
 }
