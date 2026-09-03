@@ -101,6 +101,25 @@ export default function AdminDashboard() {
         />
       </div>
 
+      {/* Resumen financiero: mostrador + gastos + ganancia neta */}
+      <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+        <StatCard
+          label="Ventas mostrador"
+          value={formatPrice(stats.totalSalesPOS)}
+          icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" /></svg>}
+        />
+        <StatCard
+          label="Gastos totales"
+          value={formatPrice(stats.totalExpenses)}
+          icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>}
+        />
+        <StatCard
+          label="Ganancia neta"
+          value={formatPrice(stats.netProfit)}
+          icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.306a11.95 11.95 0 015.814-5.518l2.74-1.22m0 0l-5.94-2.281m5.94 2.28l-2.28 5.941" /></svg>}
+        />
+      </div>
+
       {/* Charts row 1 */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Monthly sales bar chart */}
@@ -173,6 +192,23 @@ export default function AdminDashboard() {
             />
             <Area type="monotone" dataKey="revenue" stroke="#c62828" strokeWidth={2} fill="url(#revenueGrad)" />
           </AreaChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Ganancia neta mensual: online + mostrador - gastos */}
+      <div className="bg-[#0d0d10] border border-white/5 rounded-lg p-5">
+        <h2 className="text-sm font-semibold text-white/70 mb-5">Ganancia neta mensual (12 meses)</h2>
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart data={stats.monthlySales} margin={{ top: 0, right: 0, left: -10, bottom: 0 }}>
+            <XAxis dataKey="month" tick={{ fill: '#ffffff40', fontSize: 10 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: '#ffffff40', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={formatPriceShort} />
+            <Tooltip
+              contentStyle={{ backgroundColor: '#111114', border: '1px solid #ffffff10', borderRadius: 6, fontSize: 12 }}
+              labelStyle={{ color: '#ffffff80' }}
+              formatter={(v: unknown) => [formatPrice(v as number), 'Ganancia neta']}
+            />
+            <Bar dataKey="netProfit" fill="#3d9970" radius={[3, 3, 0, 0]} />
+          </BarChart>
         </ResponsiveContainer>
       </div>
 

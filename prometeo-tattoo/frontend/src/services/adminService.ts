@@ -2,6 +2,9 @@ import api from './api'
 
 export interface AdminStats {
   totalRevenue: number
+  totalSalesPOS: number
+  totalExpenses: number
+  netProfit: number
   totalOrders: number
   totalProducts: number
   totalCustomers: number
@@ -10,8 +13,8 @@ export interface AdminStats {
   ordersByStatus: { status: string; count: number }[]
   topProducts: { name: string; category: string; totalSold: number; revenue: number }[]
   salesByCategory: { category: string; revenue: number; percentage: number; count: number }[]
-  monthlySales: { month: string; revenue: number; orders: number }[]
-  dailySales: { date: string; revenue: number; orders: number }[]
+  monthlySales: { month: string; revenue: number; orders: number; posRevenue: number; expenses: number; netProfit: number }[]
+  dailySales: { date: string; revenue: number; orders: number; posRevenue: number; expenses: number; netProfit: number }[]
   lowStockProducts: { name: string; stock: number }[]
   recentOrders: AdminOrder[]
 }
@@ -49,6 +52,29 @@ export interface AdminCategory {
   slug: string
   image?: string
   _count: { products: number }
+}
+
+export type PaymentMethod = 'EFECTIVO' | 'TARJETA' | 'TRANSFERENCIA'
+
+export interface Sale {
+  id: string
+  code: string
+  total: number
+  paymentMethod: PaymentMethod
+  notes: string | null
+  voided: boolean
+  createdAt: string
+  user: { name: string }
+  items: { id: string; productId: string; quantity: number; price: number; name: string }[]
+}
+
+export interface Expense {
+  id: string
+  description: string
+  amount: number
+  category: string | null
+  createdAt: string
+  createdBy: { name: string }
 }
 
 export const adminService = {
@@ -121,5 +147,40 @@ export const adminService = {
 
   async updateConfig(updates: Record<string, string>): Promise<void> {
     await api.patch('/config', updates)
+  },
+
+  // Punto de venta (mostrador)
+  async getSales(from?: string, to?: string): Promise<Sale[]> {
+    const { data } = await api.get('/admin/pos/sales', { params: { ...(from ? { from } : {}), ...(to ? { to } : {}) } })
+    return data
+  },
+
+  async createSale(data: {
+    items: { productId: string; quantity: number }[]
+    paymentMethod: PaymentMethod
+    notes?: string
+  }): Promise<Sale> {
+    const { data: res } = await api.post('/admin/pos/sales', data)
+    return res
+  },
+
+  async voidSale(id: string): Promise<Sale> {
+    const { data } = await api.post(`/admin/pos/sales/${id}/void`)
+    return data
+  },
+
+  // Control de gastos
+  async getExpenses(from?: string, to?: string): Promise<Expense[]> {
+    const { data } = await api.get('/admin/expenses', { params: { ...(from ? { from } : {}), ...(to ? { to } : {}) } })
+    return data
+  },
+
+  async createExpense(data: { description: string; amount: number; category?: string }): Promise<Expense> {
+    const { data: res } = await api.post('/admin/expenses', data)
+    return res
+  },
+
+  async deleteExpense(id: string): Promise<void> {
+    await api.delete(`/admin/expenses/${id}`)
   },
 }

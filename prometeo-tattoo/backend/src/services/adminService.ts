@@ -23,6 +23,10 @@ export async function getDashboardStats() {
     recentOrders,
     orderItems,
     allOrders,
+    salesAgg,
+    expenseAgg,
+    allSales,
+    allExpenses,
   ] = await Promise.all([
     prisma.order.count(),
     prisma.product.count(),
@@ -43,6 +47,19 @@ export async function getDashboardStats() {
     prisma.order.findMany({
       where: { status: { in: ['DELIVERED', 'CONFIRMED', 'SHIPPED'] } },
       select: { total: true, createdAt: true },
+      orderBy: { createdAt: 'asc' },
+    }),
+    // Ventas de mostrador (POS) — se excluyen las anuladas de todos los
+    // totales, igual que una orden CANCELLED no suma en revenueAgg.
+    prisma.sale.aggregate({ _sum: { total: true }, where: { voided: false } }),
+    prisma.expense.aggregate({ _sum: { amount: true } }),
+    prisma.sale.findMany({
+      where: { voided: false },
+      select: { total: true, createdAt: true },
+      orderBy: { createdAt: 'asc' },
+    }),
+    prisma.expense.findMany({
+      select: { amount: true, createdAt: true },
       orderBy: { createdAt: 'asc' },
     }),
   ])
@@ -81,13 +98,13 @@ export async function getDashboardStats() {
     percentage: totalCatRevenue > 0 ? Math.round((data.revenue / totalCatRevenue) * 100) : 0,
   }))
 
-  // Monthly sales - últimos 12 meses
-  const months: Record<string, { revenue: number; orders: number }> = {}
+  // Monthly sales - últimos 12 meses (online + mostrador, menos gastos)
+  const months: Record<string, { revenue: number; orders: number; posRevenue: number; expenses: number }> = {}
   const now = new Date()
   for (let i = 11; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-    months[key] = { revenue: 0, orders: 0 }
+    months[key] = { revenue: 0, orders: 0, posRevenue: 0, expenses: 0 }
   }
   for (const order of allOrders) {
     const d = new Date(order.createdAt)
@@ -97,6 +114,16 @@ export async function getDashboardStats() {
       months[key].orders += 1
     }
   }
+  for (const sale of allSales) {
+    const d = new Date(sale.createdAt)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    if (months[key]) months[key].posRevenue += sale.total
+  }
+  for (const expense of allExpenses) {
+    const d = new Date(expense.createdAt)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    if (months[key]) months[key].expenses += expense.amount
+  }
   const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
   const monthlySales = Object.entries(months).map(([key, data]) => {
     const [year, month] = key.split('-')
@@ -104,11 +131,14 @@ export async function getDashboardStats() {
       month: `${monthNames[parseInt(month) - 1]} ${year}`,
       revenue: data.revenue,
       orders: data.orders,
+      posRevenue: data.posRevenue,
+      expenses: data.expenses,
+      netProfit: data.revenue + data.posRevenue - data.expenses,
     }
   })
 
-  // Daily sales - últimos 30 días
-  const dailySales: Record<string, { revenue: number; orders: number }> = {}
+  // Daily sales - últimos 30 días (online + mostrador, menos gastos)
+  const dailySales: Record<string, { revenue: number; orders: number; posRevenue: number; expenses: number }> = {}
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
   const recentOrdersAll = await prisma.order.findMany({
@@ -119,7 +149,7 @@ export async function getDashboardStats() {
     const d = new Date()
     d.setDate(d.getDate() - i)
     const key = d.toISOString().split('T')[0]
-    dailySales[key] = { revenue: 0, orders: 0 }
+    dailySales[key] = { revenue: 0, orders: 0, posRevenue: 0, expenses: 0 }
   }
   for (const order of recentOrdersAll) {
     const key = new Date(order.createdAt).toISOString().split('T')[0]
@@ -128,7 +158,19 @@ export async function getDashboardStats() {
       dailySales[key].orders += 1
     }
   }
-  const dailySalesArr = Object.entries(dailySales).map(([date, data]) => ({ date, ...data }))
+  for (const sale of allSales) {
+    const key = new Date(sale.createdAt).toISOString().split('T')[0]
+    if (dailySales[key]) dailySales[key].posRevenue += sale.total
+  }
+  for (const expense of allExpenses) {
+    const key = new Date(expense.createdAt).toISOString().split('T')[0]
+    if (dailySales[key]) dailySales[key].expenses += expense.amount
+  }
+  const dailySalesArr = Object.entries(dailySales).map(([date, data]) => ({
+    date,
+    ...data,
+    netProfit: data.revenue + data.posRevenue - data.expenses,
+  }))
 
   // Low stock
   const lowStockProducts = await prisma.product.findMany({
@@ -139,6 +181,9 @@ export async function getDashboardStats() {
 
   // Metrics
   const totalRevenue = revenueAgg._sum.total ?? 0
+  const totalSalesPOS = salesAgg._sum.total ?? 0
+  const totalExpenses = expenseAgg._sum.amount ?? 0
+  const netProfit = totalRevenue + totalSalesPOS - totalExpenses
   const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0
   const ordersByStatus = ordersByStatusRaw.map((o) => ({ status: o.status, count: o._count.id }))
 
@@ -161,6 +206,9 @@ export async function getDashboardStats() {
 
   return {
     totalRevenue,
+    totalSalesPOS,
+    totalExpenses,
+    netProfit,
     totalOrders,
     totalProducts,
     totalCustomers,

@@ -21,6 +21,8 @@ import AdminProductList from './pages/admin/AdminProductList'
 import AdminProductForm from './pages/admin/AdminProductForm'
 import AdminCategoryList from './pages/admin/AdminCategoryList'
 import AdminOrderList from './pages/admin/AdminOrderList'
+import AdminPOS from './pages/admin/AdminPOS'
+import AdminExpenses from './pages/admin/AdminExpenses'
 import AdminSettings from './pages/admin/AdminSettings'
 
 export const router = createBrowserRouter([
@@ -64,6 +66,8 @@ export const router = createBrowserRouter([
       { path: 'products/:id/edit', element: <AdminProductForm /> },
       { path: 'categories', element: <AdminCategoryList /> },
       { path: 'orders', element: <AdminOrderList /> },
+      { path: 'pos', element: <AdminPOS /> },
+      { path: 'expenses', element: <AdminExpenses /> },
       { path: 'settings', element: <AdminSettings /> },
     ],
   },
