@@ -3,6 +3,8 @@ import { auth } from '../middlewares/auth'
 import { adminOnly } from '../middlewares/adminOnly'
 import { validate } from '../middlewares/validate'
 import * as adminController from '../controllers/adminController'
+import * as posController from '../controllers/posController'
+import * as expenseController from '../controllers/expenseController'
 import {
   createProductSchema,
   updateProductSchema,
@@ -10,6 +12,8 @@ import {
   updateCategorySchema,
   orderStatusSchema,
 } from '../schemas/admin'
+import { createSaleSchema } from '../schemas/pos'
+import { createExpenseSchema } from '../schemas/expense'
 
 const router = Router()
 
@@ -30,5 +34,15 @@ router.delete('/categories/:id', adminController.deleteCategory)
 
 router.get('/orders', adminController.getOrders)
 router.patch('/orders/:id', validate(orderStatusSchema), adminController.updateOrderStatus)
+
+// Punto de venta (mostrador)
+router.get('/pos/sales', posController.getSales)
+router.post('/pos/sales', validate(createSaleSchema), posController.createSale)
+router.post('/pos/sales/:id/void', posController.voidSale)
+
+// Control de gastos
+router.get('/expenses', expenseController.getExpenses)
+router.post('/expenses', validate(createExpenseSchema), expenseController.createExpense)
+router.delete('/expenses/:id', expenseController.deleteExpense)
 
 export default router

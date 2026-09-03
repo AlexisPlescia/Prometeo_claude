@@ -9,15 +9,18 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  name      String
-  role      Role     @default(CUSTOMER)
-  orders    Order[]
-  cart      Cart?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String          @id @default(uuid())
+  email          String          @unique
+  password       String
+  name           String
+  role           Role            @default(CUSTOMER)
+  orders         Order[]
+  cart           Cart?
+  sales          Sale[]
+  expenses       Expense[]
+  stockMovements StockMovement[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 }
 
 enum Role {
@@ -34,23 +37,25 @@ model Category {
 }
 
 model Product {
-  id           String      @id @default(uuid())
-  name         String
-  slug         String      @unique
-  description  String
-  price        Float
-  comparePrice Float?
-  onSale       Boolean     @default(false)
-  stock        Int         @default(0)
-  images       String[]
-  brand        String
-  featured     Boolean     @default(false)
-  category     Category    @relation(fields: [categoryId], references: [id])
-  categoryId   String
-  cartItems    CartItem[]
-  orderItems   OrderItem[]
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  id             String          @id @default(uuid())
+  name           String
+  slug           String          @unique
+  description    String
+  price          Float
+  comparePrice   Float?
+  onSale         Boolean         @default(false)
+  stock          Int             @default(0)
+  images         String[]
+  brand          String
+  featured       Boolean         @default(false)
+  category       Category        @relation(fields: [categoryId], references: [id])
+  categoryId     String
+  cartItems      CartItem[]
+  orderItems     OrderItem[]
+  saleItems      SaleItem[]
+  stockMovements StockMovement[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   @@index([categoryId])
   @@index([featured])
@@ -116,4 +121,92 @@ model StoreConfig {
   key       String   @unique
   value     String
   updatedAt DateTime @updatedAt
+}
+
+// ─── PUNTO DE VENTA (mostrador) ─────────────────────────────────────────────
+// Separado de Order a propósito: Order es el checkout online (carrito +
+// MercadoPago). Sale es la venta presencial que carga el admin en el
+// mostrador — mismo descuento atómico de stock, sin carrito ni dirección de
+// envío ni pago online.
+
+model Sale {
+  id            String        @id @default(uuid())
+  code          String        @unique
+  user          User          @relation(fields: [userId], references: [id])
+  userId        String
+  items         SaleItem[]
+  total         Float
+  paymentMethod PaymentMethod @default(EFECTIVO)
+  notes         String?
+  // Anular no borra la venta (se pierde el registro para auditoría) — la
+  // marca como anulada, restaura el stock y se excluye de los totales de
+  // ingresos, pero el recibo original sigue existiendo.
+  voided        Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+enum PaymentMethod {
+  EFECTIVO
+  TARJETA
+  TRANSFERENCIA
+}
+
+model SaleItem {
+  id        String  @id @default(uuid())
+  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  saleId    String
+  product   Product @relation(fields: [productId], references: [id])
+  productId String
+  quantity  Int
+  price     Float
+  name      String
+
+  @@index([saleId])
+  @@index([productId])
+}
+
+// ─── CONTROL DE GASTOS ──────────────────────────────────────────────────────
+
+model Expense {
+  id          String   @id @default(uuid())
+  description String
+  amount      Float
+  category    String?
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([category])
+}
+
+// ─── AUDITORÍA DE STOCK ─────────────────────────────────────────────────────
+// Registro unificado de todo cambio de stock (venta mostrador, venta
+// online, cancelación, carga manual) — para poder responder "¿por qué
+// cambió el stock de este producto?" sin tener que cruzar Order y Sale a
+// mano.
+
+model StockMovement {
+  id        String            @id @default(uuid())
+  product   Product           @relation(fields: [productId], references: [id])
+  productId String
+  type      StockMovementType
+  delta     Int
+  saleId    String?
+  orderId   String?
+  user      User              @relation(fields: [userId], references: [id])
+  userId    String
+  createdAt DateTime          @default(now())
+
+  @@index([productId, createdAt])
+}
+
+enum StockMovementType {
+  SALE_POS
+  SALE_ONLINE
+  RESTOCK
+  ADJUSTMENT
 }
