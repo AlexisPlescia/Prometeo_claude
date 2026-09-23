@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit'
 import { env } from './config/env'
 import { router } from './routes/index'
 import { errorHandler } from './middlewares/errorHandler'
+import { prisma } from './config/prisma'
 
 const allowedOrigins = env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
 
@@ -41,13 +42,23 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
-app.get('/api/keepalive', (req, res) => {
+// Le pega a la base (no solo al proceso) a propósito: el free tier de
+// Supabase pausa el proyecto tras ~7 días sin actividad *de queries*, no
+// alcanza con que el server esté despierto. Antes esto solo devolvía "ok"
+// sin tocar la DB — no evitaba nada. Ver ESTADO_PROYECTO.md.
+app.get('/api/keepalive', async (req, res) => {
   const secret = env.CRON_SECRET
   if (secret && req.query.token !== secret) {
     res.status(401).json({ error: 'Unauthorized' })
     return
   }
-  res.json({ status: 'ok', timestamp: new Date().toISOString() })
+  try {
+    await prisma.$queryRaw`SELECT 1`
+    res.json({ status: 'ok', db: 'ok', timestamp: new Date().toISOString() })
+  } catch (err) {
+    console.error('[keepalive] DB no disponible', err)
+    res.status(503).json({ status: 'error', db: 'unavailable', timestamp: new Date().toISOString() })
+  }
 })
 
 app.use('/api', router)

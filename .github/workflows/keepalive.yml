@@ -1,0 +1,22 @@
+name: Keepalive
+
+# Evita que Supabase pause el proyecto por inactividad (el free tier lo hace
+# tras ~7 días sin queries) y que Render duerma el servicio. Corre cada 2
+# días — margen de sobra frente a la ventana de 7 días de Supabase incluso
+# si algún run falla. Ver ESTADO_PROYECTO.md para el incidente que motivó
+# esto: el 23/09/2026 Supabase pausó el proyecto viejo y nadie lo notó
+# hasta que el sitio quedó devolviendo 503 en producción.
+
+on:
+  schedule:
+    - cron: "0 12 */2 * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /api/keepalive (toca la DB, no solo el proceso)
+        run: |
+          curl -sf "https://prometeo-claude.onrender.com/api/keepalive?token=${{ secrets.CRON_SECRET }}" \
+            || (echo "::error::keepalive falló — revisar Render/Supabase" && exit 1)
