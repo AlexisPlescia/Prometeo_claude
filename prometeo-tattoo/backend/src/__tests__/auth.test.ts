@@ -16,6 +16,7 @@ vi.mock('../config/prisma', () => ({
     user: {
       findUnique: vi.fn(),
       create: vi.fn(),
+      update: vi.fn(),
     },
   },
 }))
@@ -88,5 +89,61 @@ describe('POST /api/auth/login', () => {
       .send({ email: 'noexiste@test.com', password: 'wrongpassword' })
 
     expect(res.status).toBe(401)
+  })
+})
+
+describe('PATCH /api/auth/password', () => {
+  const tokenFor = async () => {
+    const jwt = (await import('jsonwebtoken')).default
+    return jwt.sign({ userId: 'user-1', role: 'ADMIN' }, 'test-secret')
+  }
+
+  it('returns 401 without token', async () => {
+    const { default: app } = await import('../app')
+    const res = await request(app).patch('/api/auth/password').send({})
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 400 when the new password is shorter than 12 chars', async () => {
+    const { default: app } = await import('../app')
+    const res = await request(app)
+      .patch('/api/auth/password')
+      .set('Authorization', `Bearer ${await tokenFor()}`)
+      .send({ currentPassword: 'old-password', newPassword: 'corta' })
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 401 when the current password is wrong', async () => {
+    const bcrypt = (await import('bcryptjs')).default
+    const { prisma } = await import('../config/prisma')
+    ;(prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: 'user-1',
+      password: await bcrypt.hash('la-correcta-123', 4),
+    })
+    const { default: app } = await import('../app')
+    const res = await request(app)
+      .patch('/api/auth/password')
+      .set('Authorization', `Bearer ${await tokenFor()}`)
+      .send({ currentPassword: 'otra-cualquiera', newPassword: 'nueva-clave-segura' })
+    expect(res.status).toBe(401)
+    expect(prisma.user.update).not.toHaveBeenCalled()
+  })
+
+  it('updates the hash when the current password is right', async () => {
+    const bcrypt = (await import('bcryptjs')).default
+    const { prisma } = await import('../config/prisma')
+    ;(prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: 'user-1',
+      password: await bcrypt.hash('la-correcta-123', 4),
+    })
+    ;(prisma.user.update as ReturnType<typeof vi.fn>).mockResolvedValue({})
+    const { default: app } = await import('../app')
+    const res = await request(app)
+      .patch('/api/auth/password')
+      .set('Authorization', `Bearer ${await tokenFor()}`)
+      .send({ currentPassword: 'la-correcta-123', newPassword: 'nueva-clave-segura' })
+    expect(res.status).toBe(200)
+    const { data } = (prisma.user.update as ReturnType<typeof vi.fn>).mock.calls[0][0]
+    expect(await bcrypt.compare('nueva-clave-segura', data.password)).toBe(true)
   })
 })

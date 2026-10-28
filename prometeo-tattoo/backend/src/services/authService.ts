@@ -47,6 +47,18 @@ export async function login(email: string, password: string) {
   return { user: userWithoutPassword, token }
 }
 
+export async function changePassword(userId: string, currentPassword: string, newPassword: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId } })
+  if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
+    const err: Error & { statusCode?: number } = new Error('La contraseña actual es incorrecta')
+    err.statusCode = 401
+    throw err
+  }
+
+  const hashed = await bcrypt.hash(newPassword, 10)
+  await prisma.user.update({ where: { id: userId }, data: { password: hashed } })
+}
+
 export async function refreshToken(userId: string, role: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
