@@ -131,8 +131,8 @@ debería repetirse ahí tampoco).
 - Aplicado en producción vía API admin y reflejado en `seed.ts`.
 - Seed ya no tiene contraseña hardcodeada: usa `ADMIN_PASSWORD`. Nuevo script
   `npm run admin:password` para cambiarla en la base.
-- ⚠️ **En producción la contraseña del admin sigue siendo `admin123`** — cambiarla
-  con `DATABASE_URL=<Render> ADMIN_PASSWORD=<nueva> npm run admin:password`.
+- Contraseña del admin cambiada en producción (27/10/2026) vía el nuevo endpoint
+  `PATCH /api/auth/password` (pide token + contraseña actual). `admin123` ya no entra.
 
 ## Pendiente / próximos pasos
 
@@ -143,8 +143,7 @@ debería repetirse ahí tampoco).
    ejemplo por el catálogo real (si no hay backup del proyecto Supabase
    viejo, hay que cargarlo a mano o buscar si existe un export/backup en
    otro lado).
-3. **Admin**: cambiar la contraseña de `admin@prometeo.com` (es la del
-   seed, pública en el repo).
+3. ~~Admin: cambiar la contraseña~~ — hecho el 27/10/2026.
 4. **PR #1** (POS + gastos): revisar y mergear cuando se pruebe a mano.
 5. **README desactualizado**: sigue diciendo que el backend va en
    Railway — en los hechos está en Render. Conviene corregirlo para que
