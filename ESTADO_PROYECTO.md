@@ -134,9 +134,22 @@ debería repetirse ahí tampoco).
 - Contraseña del admin cambiada en producción (27/10/2026) vía el nuevo endpoint
   `PATCH /api/auth/password` (pide token + contraseña actual). `admin123` ya no entra.
 
+## Sección Tatuajes (28/10/2026)
+
+- Galería pública en `/tatuajes` (filtro por estilo, lightbox) y carga en
+  `/admin/tattoos` (subida múltiple, título/artista/estilo, orden, borrar).
+- Las fotos se guardan en Postgres (tabla `TattooWork`, columna BYTEA),
+  comprimidas en el navegador a ≤1600px JPEG (~300 kB). Sin Cloudinary.
+- La tabla la crea el server al arrancar (`src/config/ensureSchema.ts`,
+  `CREATE TABLE IF NOT EXISTS`): el `prisma db push` del Dockerfile **no corre
+  en Render** — Render arranca con otro comando. Para modelos nuevos en el
+  futuro: agregarlos ahí o correr `db push` a mano con la DATABASE_URL.
+- Probado en producción: subir, listar, servir imagen, editar y borrar.
+- Vercel ya despliega bien (el problema de "Obstruido" se resolvió solo).
+
 ## Pendiente / próximos pasos
 
-1. **Vercel**: entender por qué los deploys directos a `master` quedan
+1. ~~Vercel: deploys obstruidos~~ — resuelto al 27/10/2026. (Nota vieja: los deploys directos a `master` quedaban
    "Obstruido" — revisar `Protección de despliegue` en Settings y el log
    del deployment bloqueado más reciente.
 2. **Catálogo real**: reemplazar las 10 categorías / 25 productos de
