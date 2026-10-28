@@ -1,6 +1,6 @@
 # Estado del proyecto — Prometeo Tattoo
 
-Última actualización: 2026-09-23
+Última actualización: 2026-10-27
 
 ## Qué es
 
@@ -115,6 +115,24 @@ probó el flujo end-to-end contra una base real** (ver la nota en el PR).
 Antes de mergear: probar a mano contra la base actual (ya en modo Session
 pooler, así que el problema de prepared statements de este incidente no
 debería repetirse ahí tampoco).
+
+## Catálogo actualizado (27/10/2026)
+
+- Precios de los 25 productos ajustados al mercado argentino (tiendas locales:
+  Tomás Oberti, Amazing, Insumos Datri, Vlajec, MercadoLibre; si no hay venta
+  local: precio oficial USD × dólar BNA $1.535 × 1,3 insumos / 1,8 máquinas).
+- 10 productos con foto oficial de la marca; 15 siguen con picsum (joyería
+  propia, Kwadron, Spirit, Stencil Stuff, Dynamic, sets Eternal, AtomX2).
+- Modelos inexistentes renombrados al real: Bishop V6 → Fantom 3.5mm, Bishop
+  Wand Wireless → Power Wand XLUMEN, Critical CX-2 → AtomX2, Derm Shield 4x6 →
+  Sheet Pack 15x20cm. Flux Max: era máquina, no fuente (descripción corregida).
+- Bishop Wand 3.5 Pen: stock 0 (no existe ese modelo). No hay campo de
+  visibilidad en Product, así que sigue apareciendo como "sin stock".
+- Aplicado en producción vía API admin y reflejado en `seed.ts`.
+- Seed ya no tiene contraseña hardcodeada: usa `ADMIN_PASSWORD`. Nuevo script
+  `npm run admin:password` para cambiarla en la base.
+- ⚠️ **En producción la contraseña del admin sigue siendo `admin123`** — cambiarla
+  con `DATABASE_URL=<Render> ADMIN_PASSWORD=<nueva> npm run admin:password`.
 
 ## Pendiente / próximos pasos
 
