@@ -25,6 +25,9 @@ app.use(
     credentials: true,
   }),
 )
+// Las fotos de la galería llegan en base64 (~1 MB): ese endpoint necesita un
+// límite mayor que el de 100 kB del resto de la API.
+app.use('/api/admin/tattoos', express.json({ limit: '5mb' }))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 

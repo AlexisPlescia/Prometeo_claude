@@ -16,5 +16,8 @@ RUN npm run build
 
 EXPOSE 4000
 
-# Correr migraciones y luego iniciar el servidor
-CMD ["sh", "-c", "timeout 20 npx prisma migrate deploy || echo '[migration] skipped or failed, continuing...'; node dist/server.js"]
+# Sincronizar el schema y luego iniciar el servidor. La base de producción
+# no usa migraciones (se creó con db push), así que migrate deploy no hacía
+# nada. db push solo aplica cambios aditivos: si un cambio borraría datos,
+# falla (no se pasa --accept-data-loss) y el server arranca igual.
+CMD ["sh", "-c", "timeout 30 npx prisma db push --skip-generate || echo '[db push] skipped or failed, continuing...'; node dist/server.js"]

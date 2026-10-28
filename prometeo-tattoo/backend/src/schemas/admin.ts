@@ -27,3 +27,20 @@ export const orderStatusSchema = z.object({
     errorMap: () => ({ message: 'Estado inválido' }),
   }),
 })
+
+const optionalText = z.string().trim().max(100).nullable().optional()
+
+export const createTattooSchema = z.object({
+  imageBase64: z.string().min(1, 'La imagen es requerida'),
+  mimeType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+  title: optionalText,
+  artist: optionalText,
+  style: optionalText,
+})
+
+export const updateTattooSchema = z.object({
+  title: optionalText,
+  artist: optionalText,
+  style: optionalText,
+  position: z.number().int().optional(),
+})

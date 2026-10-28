@@ -7,6 +7,7 @@ import orderRoutes from './orderRoutes'
 import adminRoutes from './adminRoutes'
 import paymentRoutes from './paymentRoutes'
 import configRoutes from './configRoutes'
+import tattooRoutes from './tattooRoutes'
 
 const router = Router()
 
@@ -18,5 +19,6 @@ router.use('/orders', orderRoutes)
 router.use('/admin', adminRoutes)
 router.use('/payments', paymentRoutes)
 router.use('/config', configRoutes)
+router.use('/tattoos', tattooRoutes)
 
 export { router }

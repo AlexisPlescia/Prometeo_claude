@@ -117,3 +117,19 @@ model StoreConfig {
   value     String
   updatedAt DateTime @updatedAt
 }
+
+// Galería de trabajos del estudio (sección /tatuajes). La imagen se guarda
+// en la base (ya comprimida por el panel admin) para no depender de un
+// servicio externo de archivos.
+model TattooWork {
+  id        String   @id @default(uuid())
+  title     String?
+  artist    String?
+  style     String?
+  image     Bytes
+  mimeType  String
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([position])
+}

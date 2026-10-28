@@ -3,12 +3,15 @@ import { auth } from '../middlewares/auth'
 import { adminOnly } from '../middlewares/adminOnly'
 import { validate } from '../middlewares/validate'
 import * as adminController from '../controllers/adminController'
+import * as tattooController from '../controllers/tattooController'
 import {
   createProductSchema,
   updateProductSchema,
   createCategorySchema,
   updateCategorySchema,
   orderStatusSchema,
+  createTattooSchema,
+  updateTattooSchema,
 } from '../schemas/admin'
 
 const router = Router()
@@ -30,5 +33,9 @@ router.delete('/categories/:id', adminController.deleteCategory)
 
 router.get('/orders', adminController.getOrders)
 router.patch('/orders/:id', validate(orderStatusSchema), adminController.updateOrderStatus)
+
+router.post('/tattoos', validate(createTattooSchema), tattooController.create)
+router.patch('/tattoos/:id', validate(updateTattooSchema), tattooController.update)
+router.delete('/tattoos/:id', tattooController.remove)
 
 export default router
